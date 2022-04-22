@@ -71,11 +71,13 @@ class MainActivity : BaseActivity(), EventListener<QuerySnapshot> {
 
     private fun getToken() {
         FirebaseMessaging.getInstance().token.addOnSuccessListener {
+            Log.d("DEBUGS", it)
             updateToken(it)
         }
     }
 
     private fun updateToken(token: String) {
+        preferencesManager.putString(Constant.KEY_FCM_TOKEN, token)
         val database = FirebaseFirestore.getInstance()
         val documentReference = database.collection(Constant.KEY_COLLECTION_USERS).document(
             preferencesManager.getString(Constant.KEY_USER_ID)!!

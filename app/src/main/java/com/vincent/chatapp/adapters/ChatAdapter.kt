@@ -1,6 +1,7 @@
 package com.vincent.chatapp.adapters
 
 import android.graphics.Bitmap
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -8,8 +9,13 @@ import com.vincent.chatapp.databinding.ItemContainerReceivedMessageBinding
 import com.vincent.chatapp.databinding.ItemContainerSentMessageBinding
 import com.vincent.chatapp.models.ChatMessage
 
-class ChatAdapter(private val receiverProfileImage: Bitmap, private val chatMessages: List<ChatMessage>, private val senderId: String) : RecyclerView.Adapter<RecyclerView.ViewHolder>(){
+class ChatAdapter( private val chatMessages: List<ChatMessage>, private val senderId: String) : RecyclerView.Adapter<RecyclerView.ViewHolder>(){
 
+    private var receiverProfileImage: Bitmap? = null
+
+    fun setReceiverProfileImage(bitmap: Bitmap?) {
+        receiverProfileImage = bitmap
+    }
     inner class SentMessageViewHolder(private val binding: ItemContainerSentMessageBinding) : RecyclerView.ViewHolder(binding.root) {
         fun setData(chatMessage: ChatMessage) {
             with(binding) {
@@ -20,11 +26,14 @@ class ChatAdapter(private val receiverProfileImage: Bitmap, private val chatMess
     }
 
     inner class ReceivedMessageViewHolder(private val binding: ItemContainerReceivedMessageBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun setData(chatMessage: ChatMessage, receiverProfileImage: Bitmap) {
+        fun setData(chatMessage: ChatMessage, receiverProfileImage: Bitmap?) {
             with(binding) {
                 textMessage.text = chatMessage.message
                 textDateTime.text = chatMessage.dateTime
-                imageProfile.setImageBitmap(receiverProfileImage)
+                Log.d("DEBUGS", receiverProfileImage.toString())
+                if (receiverProfileImage != null) {
+                    imageProfile.setImageBitmap(receiverProfileImage)
+                }
             }
         }
     }

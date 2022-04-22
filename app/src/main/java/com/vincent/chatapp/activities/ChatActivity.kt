@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Base64
 import android.util.Log
 import android.view.View
+import android.widget.Toast
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.DocumentChange
@@ -17,8 +18,17 @@ import com.vincent.chatapp.adapters.ChatAdapter
 import com.vincent.chatapp.databinding.ActivityChatBinding
 import com.vincent.chatapp.models.ChatMessage
 import com.vincent.chatapp.models.User
+import com.vincent.chatapp.network.ApiClient
+import com.vincent.chatapp.network.ApiService
 import com.vincent.chatapp.utilities.Constant
 import com.vincent.chatapp.utilities.PreferencesManager
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.lang.Exception
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -33,6 +43,7 @@ class ChatActivity : BaseActivity(), OnCompleteListener<QuerySnapshot> {
     private lateinit var preferencesManager: PreferencesManager
     private lateinit var database: FirebaseFirestore
     private var conversionId: String = ""
+    private var isReceiverAvailable = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,13 +53,13 @@ class ChatActivity : BaseActivity(), OnCompleteListener<QuerySnapshot> {
         loadReceiverDetails()
         init()
         listenMessage()
+        listenAvailabilityOfReceiver()
     }
 
     private fun init() {
         preferencesManager = PreferencesManager(applicationContext)
         chatMessages = ArrayList()
         adapter = ChatAdapter(
-            getBitmapFromDecodeString(user.image!!),
             chatMessages,
             preferencesManager.getString(Constant.KEY_USER_ID)!!
         )
@@ -77,7 +88,93 @@ class ChatActivity : BaseActivity(), OnCompleteListener<QuerySnapshot> {
             conversion[Constant.KEY_TIME_SEND] = Calendar.getInstance().timeInMillis
             addConversion(conversion)
         }
+        if (!isReceiverAvailable) {
+            try {
+                val tokens = JSONArray()
+                tokens.put(user.token)
+
+                val data = JSONObject()
+                data.put(Constant.KEY_USER_ID, preferencesManager.getString(Constant.KEY_USER_ID))
+                data.put(Constant.KEY_NAME, preferencesManager.getString(Constant.KEY_NAME))
+                data.put(Constant.KEY_FCM_TOKEN, preferencesManager.getString(Constant.KEY_FCM_TOKEN))
+                data.put(Constant.KEY_MESSAGE, binding.inputMessage.text.toString())
+
+                val body = JSONObject()
+                body.put(Constant.REMOTE_MSG_DATA, data)
+                body.put(Constant.REMOTE_MSG_REGISTRATION_IDS, tokens)
+                Log.d("DEBUGS", "Isi ${body.toString()}")
+                sendNotification(body.toString())
+            }catch (e: Exception) {
+                showToast(e.message.toString())
+            }
+        }
         binding.inputMessage.text = null
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(applicationContext, message ,Toast.LENGTH_SHORT).show()
+    }
+
+    private fun sendNotification(messageBody: String) {
+        ApiClient().getClient().create(ApiService::class.java).sendMessage(
+            Constant.getRemoteMsgHeaders(),
+            messageBody
+        ).enqueue(object: Callback<String> {
+            override fun onResponse(call: Call<String>, response: Response<String>) {
+                if (response.isSuccessful) {
+                    try {
+                        if (response != null) {
+                            val responseJson = JSONObject(response.body())
+                            val result = responseJson.getJSONArray("results")
+                            if (responseJson.getInt("failure") == 1) {
+                                val error = result[0] as JSONObject
+                                showToast(error.getString("error"))
+                                return
+                            }
+                        }
+                    }catch (e : JSONException) {
+                        e.printStackTrace()
+                    }
+                    showToast("Notification send successfully")
+                } else {
+                    showToast("Error " + response.code())
+                }
+            }
+
+            override fun onFailure(call: Call<String>, t: Throwable) {
+                showToast(t.message.toString())
+            }
+
+        })
+    }
+
+    private fun listenAvailabilityOfReceiver() {
+        database.collection(Constant.KEY_COLLECTION_USERS).document(user.id!!)
+            .addSnapshotListener { value, error ->
+                if (error != null) {
+                    return@addSnapshotListener
+                }
+                if (value != null) {
+                    if (value.getLong(Constant.KEY_AVAILABILITY) != null) {
+                        val availability = value.getLong(Constant.KEY_AVAILABILITY)!!.toInt()
+                        isReceiverAvailable = availability == 1
+                    }
+                    user.token = value.getString(Constant.KEY_FCM_TOKEN)
+                    if (user.image == null) {
+                        user.image = value.getString(Constant.KEY_IMAGE)
+                        adapter.setReceiverProfileImage(getBitmapFromDecodeString(user.image))
+                        adapter.notifyItemRangeChanged(0, chatMessages.size)
+                    }else {
+                        adapter.setReceiverProfileImage(getBitmapFromDecodeString(user.image))
+                    }
+                }
+                if (isReceiverAvailable) {
+                    binding.textAvailability.visibility = View.VISIBLE
+                } else {
+                    binding.textAvailability.visibility = View.GONE
+                }
+
+            }
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -154,9 +251,13 @@ class ChatActivity : BaseActivity(), OnCompleteListener<QuerySnapshot> {
             }
     }
 
-    private fun getBitmapFromDecodeString(decodeImage: String) : Bitmap {
-        val bytes = Base64.decode(decodeImage, Base64.DEFAULT)
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    private fun getBitmapFromDecodeString(decodeImage: String?) : Bitmap? {
+        return if (decodeImage != null) {
+            val bytes = Base64.decode(decodeImage, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        }else {
+            null
+        }
     }
 
     private fun loadReceiverDetails() {
@@ -175,7 +276,6 @@ class ChatActivity : BaseActivity(), OnCompleteListener<QuerySnapshot> {
         val formatter = SimpleDateFormat("dd-MM-yyyy hh:mm:ss a")
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = timemillis
-        Log.d("DEBUGS", formatter.format(calendar.time))
         return formatter.format(calendar.time)
     }
 

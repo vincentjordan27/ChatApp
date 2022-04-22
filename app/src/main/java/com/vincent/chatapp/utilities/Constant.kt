@@ -23,4 +23,19 @@ object Constant {
     const val KEY_RECEIVER_IMAGE = "receiverImage"
     const val KEY_LAST_MESSAGE = "lastMessage"
     const val KEY_AVAILABILITY = "availability"
+    private const val REMOTE_MSG_AUTHORIZATION = "Authorization"
+    private const val REMOTE_MSG_CONTENT_TYPE = "Content-Type"
+    const val REMOTE_MSG_DATA = "data"
+    const val REMOTE_MSG_REGISTRATION_IDS = "registration_ids"
+
+    var remoteMsgHeaders : HashMap<String, String>? = null
+    @JvmName("getRemoteMsgHeaders1Function")
+    fun getRemoteMsgHeaders() : HashMap<String, String> {
+        if (remoteMsgHeaders == null) {
+            remoteMsgHeaders = HashMap()
+            remoteMsgHeaders!![REMOTE_MSG_AUTHORIZATION] = "key=INSERT_KEY_FROM_FIREBASE_SETTINGS"
+            remoteMsgHeaders!![REMOTE_MSG_CONTENT_TYPE] = "application/json"
+        }
+        return remoteMsgHeaders!!
+    }
 }
