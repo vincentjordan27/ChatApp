@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "865024491044",
+    "project_id": "chatapp-fed7f",
+    "storage_bucket": "chatapp-fed7f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865024491044:android:21dfe559113f4b3b0162b1",
+        "android_client_info": {
+          "package_name": "com.vincent.chatapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "865024491044-2681m6l9nok4l7fsk8udidejrttacj1g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAz39oPnaCMB4Ss9LcyAactpQSK7KPDT08"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "865024491044-2681m6l9nok4l7fsk8udidejrttacj1g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
